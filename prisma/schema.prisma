@@ -1,0 +1,271 @@
+// ========================= DETAILED COMMENTED PRISMA SCHEMA =========================
+
+// [GENERATOR] This block configures the Prisma client generator
+generator client {
+  // [GENERATOR] Specifies the Prisma client JS as the provider
+  provider = "prisma-client-js"
+}
+
+// [DATASOURCE] This block configures the database connection
+datasource db {
+  // [DATASOURCE] Specifies MySQL as the database provider
+  provider = "mysql"
+  // [DATASOURCE] Reads the database URL from the environment variable
+  url      = env("DATABASE_URL")
+}
+
+// [MODEL] User model definition
+model User {
+  // [FIELD] Primary key, auto-incremented integer
+  id       Int    @id @default(autoincrement())
+  // [FIELD] Name of the user
+  name     String
+  // [FIELD] Unique email address for the user
+  email    String @unique
+  // [FIELD] Hashed password for authentication
+  password String
+
+  // [FIELD] Optional foreign key to Organization
+  organizationId Int?
+  // [RELATION] Optional relation to Organization model
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  // [FIELD] Optional foreign key to Role
+  roleId Int?
+  // [RELATION] Optional relation to Role model
+  role   Role? @relation(fields: [roleId], references: [id])
+
+  // [FIELD] Timestamp for when the user was created, defaults to now
+  createdAt DateTime @default(now())
+  // [FIELD] Timestamp for when the user was last updated, auto-updated
+  updatedAt DateTime @updatedAt
+
+  // [RELATION] One-to-many relation: Orders where this user is the customer
+  // Opposite relation for Order.customer
+  customerOrders Order[] @relation("CustomerOrders")
+}
+
+// [MODEL] Role model definition
+model Role {
+  // [FIELD] Primary key, auto-incremented integer
+  id          Int          @id @default(autoincrement())
+  // [FIELD] Unique name for the role
+  name        String       @unique
+  // [RELATION] One-to-many relation: Users with this role
+  users       User[] // 1:N with User
+  // [RELATION] Many-to-many relation: Permissions assigned to this role
+  permissions Permission[] @relation("RolePermissions") // M:N with Permission 
+
+  // [FIELD] Timestamp for when the role was created, defaults to now
+  createdAt DateTime @default(now())
+  // [FIELD] Timestamp for when the role was last updated, auto-updated
+  updatedAt DateTime @updatedAt
+}
+
+// [MODEL] Permission model definition
+model Permission {
+  // [FIELD] Primary key, auto-incremented integer
+  id    Int    @id @default(autoincrement())
+  // [FIELD] Unique name for the permission
+  name  String @unique
+  // [RELATION] Many-to-many relation: Roles that have this permission
+  roles Role[] @relation("RolePermissions") // M:N with Role
+
+  // [FIELD] Timestamp for when the permission was created, defaults to now
+  createdAt DateTime @default(now())
+  // [FIELD] Timestamp for when the permission was last updated, auto-updated
+  updatedAt DateTime @updatedAt
+}
+
+// [MODEL] Organization model definition
+model Organization {
+  // [FIELD] Primary key, auto-incremented integer
+  id                 Int                 @id @default(autoincrement())
+  // [FIELD] Name of the organization
+  name               String
+  // [FIELD] Type of the organization (enum: OrgType)
+  type               OrgType
+  // [FIELD] Address of the organization
+  address            String
+  // [FIELD] Phone number of the organization
+  phone              String
+  // [FIELD] Unique email address for the organization
+  email              String              @unique
+  // [RELATION] One-to-many relation: Users belonging to this organization
+  users              User[]
+  // [RELATION] One-to-many relation: Warehouses owned by this organization
+  warehouses         Warehouse[]
+  // [RELATION] One-to-many relation: Logistics providers associated with this organization
+  logisticsProviders LogisticsProvider[]
+  // [RELATION] One-to-many relation: Stores owned by this organization
+  stores             Store[]
+  // [FIELD] Timestamp for when the organization was created, defaults to now
+  createdAt          DateTime            @default(now())
+  // [FIELD] Timestamp for when the organization was last updated, auto-updated
+  updatedAt          DateTime            @updatedAt
+}
+
+// [ENUM] Organization type enumeration
+enum OrgType {
+  // [ENUM VALUE] Customer organization
+  customer
+  // [ENUM VALUE] Warehouse organization
+  warehouse
+  // [ENUM VALUE] Logistics organization
+  logistics
+}
+
+// [MODEL] Warehouse model definition
+model Warehouse {
+  // [FIELD] Primary key, auto-incremented integer
+  id             Int          @id @default(autoincrement())
+  // [FIELD] Unique name for the warehouse
+  name           String       @unique
+  // [FIELD] Address of the warehouse
+  address        String
+  // [FIELD] Latitude coordinate (decimal with 6 decimal places)
+  latitude       Decimal      @db.Decimal(10, 6)
+  // [FIELD] Longitude coordinate (decimal with 6 decimal places)
+  longitude      Decimal      @db.Decimal(10, 6)
+  // [FIELD] Foreign key to Organization
+  organizationId Int
+  // [RELATION] Relation to Organization model
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  // [FIELD] Timestamp for when the warehouse was created, defaults to now
+  createdAt      DateTime     @default(now())
+  // [FIELD] Timestamp for when the warehouse was last updated, auto-updated
+  updatedAt      DateTime     @updatedAt
+
+  // [RELATION] One-to-many relation: Orders associated with this warehouse
+  // Opposite relation for Order.warehouse
+  orders Order[]
+}
+
+// [MODEL] LogisticsProvider model definition
+model LogisticsProvider {
+  // [FIELD] Primary key, auto-incremented integer
+  id             Int          @id @default(autoincrement())
+  // [FIELD] Foreign key to Organization
+  organizationId Int
+  // [RELATION] Relation to Organization model
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  // [FIELD] Name of the logistics provider
+  name           String
+  // [FIELD] Address of the logistics provider
+  address        String
+  // [FIELD] Phone number of the logistics provider
+  phone          String
+  // [FIELD] Unique email address for the logistics provider
+  email          String       @unique
+  // [FIELD] Website URL of the logistics provider
+  website        String
+  // [FIELD] Cost per kilometer (decimal with 2 decimal places)
+  cost_per_km    Decimal      @db.Decimal(10, 2)
+  // [FIELD] Cost per mile (decimal with 2 decimal places)
+  cost_per_mile  Decimal      @db.Decimal(10, 2)
+  // [FIELD] Social links as JSON object
+  socialLinks    Json
+  // [FIELD] Timestamp for when the logistics provider was created, defaults to now
+  createdAt      DateTime     @default(now())
+  // [FIELD] Timestamp for when the logistics provider was last updated, auto-updated
+  updatedAt      DateTime     @updatedAt
+
+  // [RELATION] One-to-many relation: Orders handled by this logistics provider
+  // Opposite relation for Order.logisticsProvider
+  orders Order[]
+}
+
+// [MODEL] Store model definition
+model Store {
+  // [FIELD] Primary key, auto-incremented integer
+  id             Int      @id @default(autoincrement())
+  // [FIELD] Foreign key to Organization
+  organizationId Int
+  // [FIELD] Unique name for the store
+  name           String   @unique
+  // [FIELD] Address of the store
+  address        String
+  // [FIELD] Latitude coordinate (decimal with 6 decimal places)
+  latitude       Decimal  @db.Decimal(10, 6)
+  // [FIELD] Longitude coordinate (decimal with 6 decimal places)
+  longitude      Decimal  @db.Decimal(10, 6)
+  // [FIELD] Timestamp for when the store was created, defaults to now
+  createdAt      DateTime @default(now())
+  // [FIELD] Timestamp for when the store was last updated, auto-updated
+  updatedAt      DateTime @updatedAt
+
+  // [RELATION] Relation to Organization model
+  organization Organization @relation(fields: [organizationId], references: [id])
+  // [RELATION] One-to-many relation: Orders coming from this store
+  orders       Order[] // If you have orders coming from this store
+}
+
+// [MODEL] Order model definition
+model Order {
+  // [FIELD] Primary key, auto-incremented integer
+  id                  Int         @id @default(autoincrement())
+  // [FIELD] Foreign key to User (customer)
+  customerId          Int
+  // [FIELD] Foreign key to Store
+  storeId             Int
+  // [FIELD] Delivery address for the order
+  deliveryAddress     String
+  // [FIELD] Delivery latitude (decimal with 6 decimal places)
+  deliveryLatitude    Decimal     @db.Decimal(10, 6)
+  // [FIELD] Delivery longitude (decimal with 6 decimal places)
+  deliveryLongitude   Decimal     @db.Decimal(10, 6)
+  // [FIELD] Pickup address for the order
+  pickupAddress       String
+  // [FIELD] Pickup latitude (decimal with 6 decimal places)
+  pickupLatitude      Decimal     @db.Decimal(10, 6)
+  // [FIELD] Pickup longitude (decimal with 6 decimal places)
+  pickupLongitude     Decimal     @db.Decimal(10, 6)
+  // [FIELD] Total distance in kilometers (decimal with 2 decimal places)
+  totalDistanceKm     Decimal     @db.Decimal(8, 2)
+  // [FIELD] Total distance in miles (decimal with 2 decimal places)
+  totalDistanceMiles  Decimal     @db.Decimal(8, 2)
+  // [FIELD] Status of the order (enum: OrderStatus)
+  status              OrderStatus
+  // [FIELD] Date of pickup
+  pickupDate          DateTime
+  // [FIELD] Time of pickup
+  pickupTime          DateTime
+  // [FIELD] Date of delivery
+  deliveryDate        DateTime
+  // [FIELD] Time of delivery
+  deliveryTime        DateTime
+  // [FIELD] Optional foreign key to LogisticsProvider
+  logisticsProviderId Int?
+  // [FIELD] Optional foreign key to Warehouse
+  warehouseId         Int?
+
+  // [RELATION] Relation to User (customer), using the "CustomerOrders" relation name
+  customer          User               @relation("CustomerOrders", fields: [customerId], references: [id])
+  // [RELATION] Relation to Store
+  store             Store              @relation(fields: [storeId], references: [id])
+  // [RELATION] Optional relation to LogisticsProvider
+  logisticsProvider LogisticsProvider? @relation(fields: [logisticsProviderId], references: [id])
+  // [RELATION] Optional relation to Warehouse
+  warehouse         Warehouse?         @relation(fields: [warehouseId], references: [id])
+
+  // [FIELD] Timestamp for when the order was created, defaults to now
+  createdAt DateTime @default(now())
+  // [FIELD] Timestamp for when the order was last updated, auto-updated
+  updatedAt DateTime @updatedAt
+}
+
+// [ENUM] Order status enumeration
+enum OrderStatus {
+  // [ENUM VALUE] Order is pending
+  pending
+  // [ENUM VALUE] Order is being processed
+  processing
+  // [ENUM VALUE] Order has been shipped
+  shipped
+  // [ENUM VALUE] Order has been delivered
+  delivered
+  // [ENUM VALUE] Order has been cancelled
+  cancelled
+}
+
+// ========================= END OF DETAILED COMMENTED PRISMA SCHEMA =========================
